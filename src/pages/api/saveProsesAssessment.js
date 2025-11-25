@@ -1,0 +1,63 @@
+// // API handler for saving assessment in /pages/api/saveProsesAssessment.js
+// import mysql from 'mysql2/promise';
+// //code src/pages/api/saveProsesAssessment.js
+
+// export default async function handler(req, res) {
+//   if (req.method === 'POST') {
+//     const { pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol, beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan } = req.body;
+
+//     try {
+//       const connection = await mysql.createConnection({
+//         host: 'localhost',
+//         user: 'root',
+//         password: 'Bekasibarat12',
+//         database: 'emr_db',
+//       });
+
+//       await connection.query(
+//         `INSERT INTO proses_assessment (pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol, beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//         [pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol, beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan]
+//       );
+
+//       await connection.end();
+//       res.status(200).json({ message: 'Data assessment berhasil disimpan.' });
+//     } catch (error) {
+//       console.error('Database Error:', error);
+//       res.status(500).json({ message: 'Terjadi kesalahan saat menyimpan data.', error: error.message });
+//     }
+//   } else {
+//     res.status(405).json({ message: 'Method tidak diizinkan' });
+//   }
+// }
+
+
+
+// src/pages/api/saveProsesAssessment.js
+import { getPool } from '@/lib/db';
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method tidak diizinkan' });
+
+  const {
+    pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
+    beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan
+  } = req.body;
+
+  if (!pasienId) return res.status(400).json({ message: 'pasienId wajib diisi' });
+
+  try {
+    const pool = getPool();
+    await pool.query(
+      `INSERT INTO proses_assessment (
+        pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
+        beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [pasienId, denyutJantung || null, pernapasan || null, suhu || null, tingkatKesadaran || null, tekananSistol || null, tekananDiastol || null, beratBadan || null, tinggiBadan || null, keluhan || null, riwayatPenyakit || null, riwayatAlergi || null, riwayatPengobatan || null, pemeriksaan ? JSON.stringify(pemeriksaan) : null]
+    );
+
+    return res.status(200).json({ message: 'Data assessment berhasil disimpan.' });
+  } catch (error) {
+    console.error('🔥 SQL Error (saveProsesAssessment):', error);
+    return res.status(500).json({ message: 'Terjadi kesalahan saat menyimpan data.', error: error?.message ?? String(error) });
+  }
+}

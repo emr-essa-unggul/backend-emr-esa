@@ -1,0 +1,158 @@
+// import mysql from 'mysql2/promise';
+
+// export default async function handler(req, res) {
+//   if (req.method === 'GET') {
+//     const { noRM } = req.query;
+
+//     try {
+//       const connection = await mysql.createConnection({
+//         host: 'localhost',
+//         user: 'root',
+//         password: 'Bekasibarat12',
+//         database: 'emr_db'
+//       });
+
+//       // Ambil data pasien berdasarkan noRM
+//       const [rows] = await connection.query(`
+//         SELECT 
+//           antrian.noRM,
+//           pasien.nik,
+//           pasien.namaLengkap AS namaPenanggungJawab,
+//           pasien.jenisKelamin,
+//           pasien.tanggalLahir
+//         FROM antrian_pemeriksaan AS antrian
+//         JOIN daftarpatients AS pasien ON antrian.noRM = pasien.noRM
+//         WHERE antrian.noRM = ?
+//       `, [noRM]);
+
+//       await connection.end(); // Tutup koneksi setelah query selesai
+
+//       if (rows.length > 0) {
+//         res.status(200).json(rows[0]);
+//       } else {
+//         res.status(404).json({ message: 'Data pasien tidak ditemukan' });
+//       }
+//     } catch (error) {
+//       res.status(500).json({ message: 'Terjadi kesalahan server', error: error.message });
+//     }
+//   } else {
+//     res.setHeader('Allow', ['GET']);
+//     res.status(405).end(`Method ${req.method} tidak diizinkan`);
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//ini jangan dihapus ya kii ini main nya kepalanya
+// import mysql from 'mysql2/promise';
+// //code src/pages/api/getPatientDetails.js
+
+// export default async function handler(req, res) {
+//   if (req.method === 'GET') {
+//     const { noRM } = req.query;
+
+//     try {
+//       const connection = await mysql.createConnection({
+//         host: 'localhost',
+//         user: 'root',
+//         password: 'Bekasibarat12',
+//         database: 'emr_db',
+//       });
+
+//       const [rows] = await connection.query('SELECT * FROM patients WHERE noRM = ?', [noRM]);
+
+//       await connection.end();
+
+//       if (rows.length > 0) {
+//         res.setHeader('Cache-Control', 'no-store');  // Disable caching
+//         res.status(200).json(rows[0]);
+//       } else {
+//         res.status(404).json({ message: 'Data pasien tidak ditemukan' });
+//       }
+//     } catch (error) {
+//       console.error('Database Error:', error);
+//       res.status(500).json({ message: 'Terjadi kesalahan pada server' });
+//     }
+//   } else {
+//     res.status(405).json({ message: 'Method tidak diizinkan' });
+//   }
+// }
+
+
+// src/pages/api/getPatientDetails.js
+import { getPool } from '@/lib/db';
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ message: 'Method tidak diizinkan' });
+
+  const { noRM } = req.query;
+  if (!noRM) return res.status(400).json({ message: 'noRM wajib disertakan sebagai query parameter' });
+
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM patients WHERE noRM = ?', [noRM]);
+
+    if (rows && rows.length > 0) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).json(rows[0]);
+    }
+    return res.status(404).json({ message: 'Data pasien tidak ditemukan' });
+  } catch (error) {
+    console.error('🔥 SQL Error (getPatientDetails):', error);
+    return res.status(500).json({ message: 'Terjadi kesalahan pada server', error: error?.message ?? String(error) });
+  }
+}
+
+
+
+// import mysql from 'mysql2/promise';
+
+// export default async function handler(req, res) {
+//   if (req.method === 'GET') {
+//     const { noRM } = req.query;
+
+//     try {
+//       const connection = await mysql.createConnection({
+//         host: 'localhost',
+//         user: 'root',
+//         password: 'Bekasibarat12',
+//         database: 'emr_db'
+//       });
+
+//       // Ambil data pasien berdasarkan noRM dari tabel daftarpatients
+//       const [rows] = await connection.query(`
+//         SELECT 
+//           pasien.noRM,
+//           pasien.nik,
+//           pasien.namaLengkap AS namaPenanggungJawab,
+//           pasien.jenisKelamin,
+//           pasien.tanggalLahir
+//         FROM daftarpatients AS pasien
+//         WHERE pasien.noRM = ?
+//       `, [noRM]);
+
+//       await connection.end(); // Tutup koneksi setelah query selesai
+
+//       if (rows.length > 0) {
+//         res.status(200).json(rows[0]);
+//       } else {
+//         res.status(404).json({ message: 'Data pasien tidak ditemukan' });
+//       }
+//     } catch (error) {
+//       res.status(500).json({ message: 'Terjadi kesalahan server', error: error.message });
+//     }
+//   } else {
+//     res.setHeader('Allow', ['GET']);
+//     res.status(405).end(`Method ${req.method} tidak diizinkan`);
+//   }
+// }
