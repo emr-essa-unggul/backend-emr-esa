@@ -4,7 +4,8 @@ import mysql from 'mysql2/promise';
 const {
   DB_HOST = 'localhost',
   DB_USER = 'root',
-  DB_PASS = 'Bekasibarat12',
+  // DB_PASS = 'Bekasibarat12',
+  DB_PASS,
   DB_NAME = 'emr_db',
   DB_CONN_LIMIT = 10,
 } = process.env;

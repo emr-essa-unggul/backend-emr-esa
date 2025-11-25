@@ -4,3 +4,7 @@ node_modules
 .env.local
 .DS_Store
 .vscode
+# .gitignore
+.env
+.env.local
+.env.*.local
