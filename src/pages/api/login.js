@@ -602,71 +602,63 @@ import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { setCookie } from 'nookies';
 
+// Ambil whitelist dari env (lebih fleksibel) — fallback menyertakan localhost + production origin
 const ALLOWED_ORIGINS = (process.env.BACKEND_ALLOWED_ORIGINS || 'http://localhost:3000,https://emr-ueu.web.app')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
-function setCors(res, origin) {
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+// single helper CORS (deterministic — tidak menggunakan fallback ke ALLOWED_ORIGINS[0])
+function applyCors(req, res) {
+  const origin = req.headers.origin;
+
+  // Jika tidak ada origin (server-to-server / curl), ijinkan semua
+  if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Vary', 'Origin');
+  } else if (ALLOWED_ORIGINS.includes(origin)) {
+    // ORIGIN DI-WHITELIST -> kembalikan origin yang persis sama
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-    // jika ingin browser menyimpan cookie cross-site:
+    // jika perlu cookie cross-site, aktifkan baris berikut dan frontend harus memakai credentials: 'include'
     // res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
   } else {
-    // origin tidak di-whitelist -> kita set header ke origin pertama agar preflight tidak gagal total
-    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0] || '*');
-    res.setHeader('Vary', 'Origin');
+    // Origin tidak diizinkan — **jangan** set header Access-Control-Allow-Origin ke nilai fallback (mis localhost)
+    // Biarkan tanpa header sehingga browser akan memblokir. 
+    // (Kamu juga bisa mengembalikan 403 untuk preflight jika ingin stricter behaviour)
+    // NOTE: Tidak meng-set header mencegah header salah seperti 'http://localhost:3000' dikirim ke browser.
   }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 }
 
+// lalu di handler gunakan applyCors dan tangani preflight
 export default async function handler(req, res) {
-  const origin = req.headers.origin;
-  setCors(res, origin);
-
-  // handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
-  // basic validation
-  const { username, password, otp } = req.body || {};
-  if (!username || !password || !otp) {
-    return res.status(400).json({ message: 'Harap isi semua field' });
-  }
-
   try {
-    // pastikan getPool tidak me-return undefined
+    applyCors(req, res);
+
+    // Preflight: segera kembalikan 204 (tanpa menjalankan logic login)
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+
+    // keep your existing logic unchanged below...
+    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+    const { username, password, otp } = req.body;
+    if (!username || !password || !otp) return res.status(400).json({ message: 'Harap isi semua field' });
+
     const pool = getPool();
     if (!pool) {
-      console.error('❌ getPool() mengembalikan undefined/null. Periksa konfigurasi DB (env vars).');
-      return res.status(500).json({ message: 'Internal server error (DB pool)' });
+      console.error('DB pool undefined');
+      return res.status(500).json({ message: 'Internal server error' });
     }
 
-    // ambil user
     const [users] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
-    if (!Array.isArray(users) || users.length === 0) {
-      // optional: log untuk dev, jangan expose detail ke client
-      console.warn(`Login attempt: username not found -> ${username}`);
-      return res.status(401).json({ message: 'Username tidak ditemukan' });
-    }
+    if (!Array.isArray(users) || users.length === 0) return res.status(401).json({ message: 'Username tidak ditemukan' });
     const user = users[0];
 
-    // Pastikan kolom yg diperlukan ada
-    if (!('password' in user)) {
-      console.error('❌ Struktur tabel users tidak memiliki kolom "password". Row:', user);
-      return res.status(500).json({ message: 'Internal server error (user schema)' });
-    }
-
-    // cek percobaan gagal
     const [attemptsRows] = await pool.query(
       `SELECT COUNT(*) as failedAttempts
        FROM login_attempts
@@ -674,52 +666,40 @@ export default async function handler(req, res) {
       [username]
     );
     const failedAttempts = attemptsRows?.[0]?.failedAttempts ?? 0;
-    if (failedAttempts >= 3) {
-      return res.status(429).json({ message: 'Terlalu banyak percobaan gagal. Coba lagi nanti.' });
-    }
+    if (failedAttempts >= 3) return res.status(429).json({ message: 'Terlalu banyak percobaan gagal. Coba lagi nanti.' });
 
-    // verifikasi password defensif
     const storedPassword = user.password ?? '';
     let isPasswordValid = false;
     try {
-      // bcrypt.compare toleran terhadap string kosong, tapi pastikan argumen string
       isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
     } catch (bcryptErr) {
-      console.error('❌ bcrypt.compare error:', bcryptErr);
-      // fallback: bandingkan plaintext (tidak direkomendasikan) jika storedPassword sama persis
+      console.error('bcrypt error', bcryptErr);
       isPasswordValid = String(password).trim() === String(storedPassword);
     }
-
     const isSameHash = String(password).trim() === String(storedPassword);
     if (!isPasswordValid && !isSameHash) {
       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
       return res.status(401).json({ message: 'Password salah' });
     }
 
-    // verifikasi OTP
     const userOtpSecret = user.otp_secret ?? user.otp ?? null;
     if (!userOtpSecret || String(userOtpSecret) !== String(otp)) {
       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
       return res.status(401).json({ message: 'OTP tidak valid' });
     }
 
-    // update last_login & log success
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
     await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 1, NOW())', [username]);
 
-    // set cookie role (httpOnly). NOTE: untuk cookie cross-site, perlu Access-Control-Allow-Credentials: true di header
     setCookie({ res }, 'userRole', user.role || 'user', {
       httpOnly: true,
       maxAge: 30 * 60,
       path: '/',
-      // sameSite: 'lax', secure: true
     });
 
     return res.status(200).json({ message: 'Login berhasil' });
-  } catch (err) {
-    // Log stack trace lengkap agar Vercel logs memberi detail
-    console.error('❌ Error API /api/login:', err && (err.stack || err.message || err));
-    // kembalikan pesan generik
+  } catch (error) {
+    console.error('❌ Error API Login:', error);
     return res.status(500).json({ message: 'Terjadi kesalahan' });
   }
 }
