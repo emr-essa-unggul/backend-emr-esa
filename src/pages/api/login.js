@@ -814,7 +814,7 @@
 
 
 
-//backend login api dengan cors dan otp serta bcrypt
+
 // src/pages/api/login.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
@@ -846,8 +846,6 @@ function applyCors(req, res) {
     res.setHeader('Access-Control-Allow-Credentials', 'true'); // supaya browser mengirim cookie
     res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
-
     return;
   }
 
