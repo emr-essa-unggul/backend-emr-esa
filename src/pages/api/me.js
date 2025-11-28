@@ -13,7 +13,7 @@
 // }
 
 
-
+//backend emr-esa
 // src/pages/api/me.js (contoh kecil)
 import { parse } from 'cookie';
 
@@ -30,6 +30,8 @@ function applyCors(req, res) {
   if (ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
+
   }
 }
 
