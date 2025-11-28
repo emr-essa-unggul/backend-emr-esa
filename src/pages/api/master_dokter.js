@@ -42,10 +42,11 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     // Jika front-end butuh mengirim cookie/session, aktifkan credentials dan pastikan origin bukan '*'
-    // res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   } else if (!origin) {
     // Permintaan server-to-server (curl, internal) mungkin tidak punya origin -> izinkan
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app/');
   } else {
     // Origin tidak diizinkan -> jangan set Access-Control-Allow-Origin atau kembalikan 403 untuk OPTIONS/GET/POST khususnya
     // Kita tetap lanjutkan supaya response memiliki no-cors di browser (browser akan block client-side).
