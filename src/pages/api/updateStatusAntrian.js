@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   } else if (!origin) {
     // Permintaan server-to-server (curl, internal) mungkin tidak punya origin -> izinkan
     // res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app/');
+    res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
     
     
   } else {
