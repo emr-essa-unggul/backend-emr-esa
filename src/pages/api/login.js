@@ -597,68 +597,289 @@
 
 
 
+// // src/pages/api/login.js
+// import { getPool } from '@/lib/db';
+// import bcrypt from 'bcryptjs';
+// import { setCookie } from 'nookies';
+
+// // Ambil whitelist dari env (lebih fleksibel) — fallback menyertakan localhost + production origin
+// const ALLOWED_ORIGINS = (process.env.BACKEND_ALLOWED_ORIGINS || 'http://localhost:3000,https://emr-ueu.web.app')
+//   .split(',')
+//   .map(s => s.trim())
+//   .filter(Boolean);
+
+// // single helper CORS (deterministic — tidak menggunakan fallback ke ALLOWED_ORIGINS[0])
+// function applyCors(req, res) {
+//   const origin = req.headers.origin;
+
+//   // Jika tidak ada origin (server-to-server / curl), ijinkan semua
+//   if (!origin) {
+//     res.setHeader('Access-Control-Allow-Origin', '*');
+//     res.setHeader('Vary', 'Origin');
+//   } else if (ALLOWED_ORIGINS.includes(origin)) {
+//     // ORIGIN DI-WHITELIST -> kembalikan origin yang persis sama
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Vary', 'Origin');
+//     // jika perlu cookie cross-site, aktifkan baris berikut dan frontend harus memakai credentials: 'include'
+//     // res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   } else {
+//     // Origin tidak diizinkan — **jangan** set header Access-Control-Allow-Origin ke nilai fallback (mis localhost)
+//     // Biarkan tanpa header sehingga browser akan memblokir. 
+//     // (Kamu juga bisa mengembalikan 403 untuk preflight jika ingin stricter behaviour)
+//     // NOTE: Tidak meng-set header mencegah header salah seperti 'http://localhost:3000' dikirim ke browser.
+//   }
+
+//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+// }
+
+// // lalu di handler gunakan applyCors dan tangani preflight
+// export default async function handler(req, res) {
+//   try {
+//     applyCors(req, res);
+
+//     // Preflight: segera kembalikan 204 (tanpa menjalankan logic login)
+//     if (req.method === 'OPTIONS') {
+//       return res.status(204).end();
+//     }
+
+//     // keep your existing logic unchanged below...
+//     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+//     const { username, password, otp } = req.body;
+//     if (!username || !password || !otp) return res.status(400).json({ message: 'Harap isi semua field' });
+
+//     const pool = getPool();
+//     if (!pool) {
+//       console.error('DB pool undefined');
+//       return res.status(500).json({ message: 'Internal server error' });
+//     }
+
+//     const [users] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+//     if (!Array.isArray(users) || users.length === 0) return res.status(401).json({ message: 'Username tidak ditemukan' });
+//     const user = users[0];
+
+//     const [attemptsRows] = await pool.query(
+//       `SELECT COUNT(*) as failedAttempts
+//        FROM login_attempts
+//        WHERE username = ? AND success = 0 AND attempt_time > (NOW() - INTERVAL 15 MINUTE)`,
+//       [username]
+//     );
+//     const failedAttempts = attemptsRows?.[0]?.failedAttempts ?? 0;
+//     if (failedAttempts >= 3) return res.status(429).json({ message: 'Terlalu banyak percobaan gagal. Coba lagi nanti.' });
+
+//     const storedPassword = user.password ?? '';
+//     let isPasswordValid = false;
+//     try {
+//       isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
+//     } catch (bcryptErr) {
+//       console.error('bcrypt error', bcryptErr);
+//       isPasswordValid = String(password).trim() === String(storedPassword);
+//     }
+//     const isSameHash = String(password).trim() === String(storedPassword);
+//     if (!isPasswordValid && !isSameHash) {
+//       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
+//       return res.status(401).json({ message: 'Password salah' });
+//     }
+
+//     const userOtpSecret = user.otp_secret ?? user.otp ?? null;
+//     if (!userOtpSecret || String(userOtpSecret) !== String(otp)) {
+//       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
+//       return res.status(401).json({ message: 'OTP tidak valid' });
+//     }
+
+//     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+//     await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 1, NOW())', [username]);
+
+//     setCookie({ res }, 'userRole', user.role || 'user', {
+//       httpOnly: true,
+//       maxAge: 30 * 60,
+//       path: '/',
+//     });
+
+//     return res.status(200).json({ message: 'Login berhasil' });
+//   } catch (error) {
+//     console.error('❌ Error API Login:', error);
+//     return res.status(500).json({ message: 'Terjadi kesalahan' });
+//   }
+// }
+
+
+// // src/pages/api/login.js
+// import { getPool } from '@/lib/db';
+// import bcrypt from 'bcryptjs';
+// import { setCookie } from 'nookies';
+
+// // Allowed origins untuk CORS
+// const ALLOWED_ORIGINS = (process.env.BACKEND_ALLOWED_ORIGINS || 'http://localhost:3000,https://emr-ueu.web.app')
+//   .split(',')
+//   .map(s => s.trim())
+//   .filter(Boolean);
+
+// function applyCors(req, res) {
+//   const origin = req.headers.origin;
+
+//   if (!origin) {
+//     res.setHeader('Access-Control-Allow-Origin', '*');
+//     res.setHeader('Vary', 'Origin');
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   } else if (ALLOWED_ORIGINS.includes(origin)) {
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Vary', 'Origin');
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   }
+//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+//   res.setHeader('Access-Control-Allow-Credentials', 'true');
+// }
+
+// export default async function handler(req, res) {
+//   try {
+//     applyCors(req, res);
+
+//     // Preflight request
+//     if (req.method === 'OPTIONS') return res.status(204).end();
+
+//     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+//     const { username, password, otp } = req.body;
+//     if (!username || !password || !otp) return res.status(400).json({ message: 'Harap isi semua field' });
+
+//     const pool = getPool();
+//     if (!pool) return res.status(500).json({ message: 'DB connection error' });
+
+//     // Ambil user
+//     const [users] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+//     if (!Array.isArray(users) || users.length === 0) return res.status(401).json({ message: 'Username tidak ditemukan' });
+
+//     const user = users[0];
+
+//     // Cek login attempts terakhir 15 menit
+//     const [attemptsRows] = await pool.query(
+//       `SELECT COUNT(*) as failedAttempts
+//        FROM login_attempts
+//        WHERE username = ? AND success = 0 AND attempt_time > (NOW() - INTERVAL 15 MINUTE)`,
+//       [username]
+//     );
+//     const failedAttempts = attemptsRows?.[0]?.failedAttempts ?? 0;
+//     if (failedAttempts >= 3) return res.status(429).json({ message: 'Terlalu banyak percobaan gagal. Coba lagi nanti.' });
+
+//     // Cek password
+//     const storedPassword = user.password ?? '';
+//     let isPasswordValid = false;
+//     try {
+//       isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
+//     } catch (err) {
+//       isPasswordValid = String(password).trim() === String(storedPassword);
+//     }
+
+//     if (!isPasswordValid) {
+//       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
+//       return res.status(401).json({ message: 'Password salah' });
+//     }
+
+//     // Cek OTP
+//     const userOtpSecret = user.otp_secret ?? user.otp ?? null;
+//     if (!userOtpSecret || String(userOtpSecret) !== String(otp)) {
+//       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
+//       return res.status(401).json({ message: 'OTP tidak valid' });
+//     }
+
+//     // Update last login + simpan login attempt sukses
+//     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+//     await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 1, NOW())', [username]);
+
+//     // Set cookie
+//     // setCookie({ res }, 'userRole', user.role || 'user', {
+//     //   httpOnly: true,
+//     //   maxAge: 30 * 60,
+//     //   path: '/',
+//     // });
+//     setCookie({ res }, 'userRole', String(user.role || 'user'), {
+//   httpOnly: true,
+//   secure: process.env.NODE_ENV === 'production', // harus true di prod
+//   sameSite: 'none', // penting untuk cookie cross-site
+//   path: '/',
+//   maxAge: 30 * 60, // 30 menit
+// });
+
+
+//     return res.status(200).json({ message: 'Login berhasil' });
+
+//   } catch (error) {
+//     console.error('❌ API Login Error:', error);
+//     return res.status(500).json({ message: 'Terjadi kesalahan' });
+//   }
+// }
+
+
+
+//backend login api dengan cors dan otp serta bcrypt
 // src/pages/api/login.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { setCookie } from 'nookies';
 
-// Ambil whitelist dari env (lebih fleksibel) — fallback menyertakan localhost + production origin
+// Allowed origins untuk CORS (bisa di-set via env BACKEND_ALLOWED_ORIGINS)
 const ALLOWED_ORIGINS = (process.env.BACKEND_ALLOWED_ORIGINS || 'http://localhost:3000,https://emr-ueu.web.app')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
-// single helper CORS (deterministic — tidak menggunakan fallback ke ALLOWED_ORIGINS[0])
 function applyCors(req, res) {
   const origin = req.headers.origin;
 
-  // Jika tidak ada origin (server-to-server / curl), ijinkan semua
+  // Selalu beri tahu browser bahwa response bervariasi berdasarkan Origin
+  res.setHeader('Vary', 'Origin');
+
   if (!origin) {
+    // request server-to-server / tools (curl). Jangan set credentials di kasus ini.
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Vary', 'Origin');
-  } else if (ALLOWED_ORIGINS.includes(origin)) {
-    // ORIGIN DI-WHITELIST -> kembalikan origin yang persis sama
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    // jika perlu cookie cross-site, aktifkan baris berikut dan frontend harus memakai credentials: 'include'
-    // res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else {
-    // Origin tidak diizinkan — **jangan** set header Access-Control-Allow-Origin ke nilai fallback (mis localhost)
-    // Biarkan tanpa header sehingga browser akan memblokir. 
-    // (Kamu juga bisa mengembalikan 403 untuk preflight jika ingin stricter behaviour)
-    // NOTE: Tidak meng-set header mencegah header salah seperti 'http://localhost:3000' dikirim ke browser.
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    return;
   }
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  // Jika origin di whitelist -> set header spesifik origin + izinkan credentials
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true'); // supaya browser mengirim cookie
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
+
+    return;
+  }
+
+  // Default: tidak set Access-Control-Allow-Origin (browser akan blokir)
+  // (kita sengaja tidak mengirim header kalau origin tidak diizinkan)
 }
 
-// lalu di handler gunakan applyCors dan tangani preflight
 export default async function handler(req, res) {
   try {
+    // Pasang header CORS sesuai origin
     applyCors(req, res);
 
-    // Preflight: segera kembalikan 204 (tanpa menjalankan logic login)
+    // Preflight request (OPTIONS)
     if (req.method === 'OPTIONS') {
       return res.status(204).end();
     }
 
-    // keep your existing logic unchanged below...
     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
     const { username, password, otp } = req.body;
     if (!username || !password || !otp) return res.status(400).json({ message: 'Harap isi semua field' });
 
     const pool = getPool();
-    if (!pool) {
-      console.error('DB pool undefined');
-      return res.status(500).json({ message: 'Internal server error' });
-    }
+    if (!pool) return res.status(500).json({ message: 'DB connection error' });
 
+    // Ambil user
     const [users] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
     if (!Array.isArray(users) || users.length === 0) return res.status(401).json({ message: 'Username tidak ditemukan' });
+
     const user = users[0];
 
+    // Cek login attempts terakhir 15 menit
     const [attemptsRows] = await pool.query(
       `SELECT COUNT(*) as failedAttempts
        FROM login_attempts
@@ -668,38 +889,46 @@ export default async function handler(req, res) {
     const failedAttempts = attemptsRows?.[0]?.failedAttempts ?? 0;
     if (failedAttempts >= 3) return res.status(429).json({ message: 'Terlalu banyak percobaan gagal. Coba lagi nanti.' });
 
+    // Cek password
     const storedPassword = user.password ?? '';
     let isPasswordValid = false;
     try {
       isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
-    } catch (bcryptErr) {
-      console.error('bcrypt error', bcryptErr);
+    } catch (err) {
+      // fallback jika password tidak ter-hash (legacy)
       isPasswordValid = String(password).trim() === String(storedPassword);
     }
-    const isSameHash = String(password).trim() === String(storedPassword);
-    if (!isPasswordValid && !isSameHash) {
+
+    if (!isPasswordValid) {
       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
       return res.status(401).json({ message: 'Password salah' });
     }
 
+    // Cek OTP (sesuaikan logic OTP kamu)
     const userOtpSecret = user.otp_secret ?? user.otp ?? null;
     if (!userOtpSecret || String(userOtpSecret) !== String(otp)) {
       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
       return res.status(401).json({ message: 'OTP tidak valid' });
     }
 
+    // Update last login + simpan login attempt sukses
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
     await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 1, NOW())', [username]);
 
-    setCookie({ res }, 'userRole', user.role || 'user', {
+    // Set cookie cross-site (httpOnly). Pastikan sameSite:none + secure:true di production
+    setCookie({ res }, 'userRole', String(user.role || 'user'), {
       httpOnly: true,
-      maxAge: 30 * 60,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
       path: '/',
+      maxAge: 30 * 60, // 30 menit
     });
 
-    return res.status(200).json({ message: 'Login berhasil' });
+    // Kembalikan role juga agar frontend bisa langsung set UI (opsional)
+    return res.status(200).json({ message: 'Login berhasil', role: user.role || 'user' });
+
   } catch (error) {
-    console.error('❌ Error API Login:', error);
+    console.error('❌ API Login Error:', error);
     return res.status(500).json({ message: 'Terjadi kesalahan' });
   }
 }
