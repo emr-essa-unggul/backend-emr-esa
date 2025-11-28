@@ -832,19 +832,6 @@ function applyCors(req, res) {
   // Selalu beri tahu browser bahwa response bervariasi berdasarkan Origin
   res.setHeader('Vary', 'Origin');
 
-
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else {
-    // non-browser / curl
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
-
   if (!origin) {
     // request server-to-server / tools (curl). Jangan set credentials di kasus ini.
     res.setHeader('Access-Control-Allow-Origin', '*');
