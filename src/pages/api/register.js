@@ -296,7 +296,9 @@ export default async function handler(req, res) {
     const hashedPassword = await bcrypt.hash(String(password).trim(), 10);
 
     // lakukan insert — laporkan kolom yang dipakai agar tidak error karena schema mismatch
-    const insertSql = 'INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())';
+    // const insertSql = 'INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())';
+    // const params = [username, hashedPassword, role, otp_secret];
+    const insertSql = 'INSERT INTO users (username, password, role, otp_secret) VALUES (?, ?, ?, NOW())';
     const params = [username, hashedPassword, role, otp_secret];
 
     let result;
@@ -312,7 +314,8 @@ export default async function handler(req, res) {
     // audit log (jangan blokir register jika audit gagal — tapi log)
     try {
       await pool.query(
-        'INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())',
+        // 'INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())',
+        'INSERT INTO audit_logs (user_id, action, table_name, record_id) VALUES (?, ?, ?, NOW())',
         [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]
       );
     } catch (auditErr) {
