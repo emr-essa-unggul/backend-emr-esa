@@ -33,138 +33,66 @@
 
 //backend-emr-esa/src/pages/api/saveProsesAssessment.js // jangan dulu diotak atik walaupun ada eror dikit
 // src/pages/api/saveProsesAssessment.js
-// import { getPool } from '@/lib/db';
-
-// const ALLOWED_ORIGINS = [
-//   'http://localhost:3000',
-//   'http://127.0.0.1:3000',
-//   'https://emr-ueu.web.app',
-//   'https://emr-ueu.firebaseapp.com', // jika perlu
-//   // tambahkan origin lain yang harus diizinkan
-// ];
-
-// export default async function handler(req, res) {
-//   const origin = req.headers.origin;
-
-//   // Set CORS headers if origin is allowed
-//   if (origin && ALLOWED_ORIGINS.includes(origin)) {
-//     res.setHeader('Access-Control-Allow-Origin', origin);
-//     res.setHeader('Vary', 'Origin');
-//     // Jika front-end butuh mengirim cookie/session, aktifkan credentials dan pastikan origin bukan '*'
-//     res.setHeader('Access-Control-Allow-Credentials', 'true');
-//   } else if (!origin) {
-//     // Permintaan server-to-server (curl, internal) mungkin tidak punya origin -> izinkan
-//     // res.setHeader('Access-Control-Allow-Origin', '*');
-//     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
-//   } else {
-//     // Origin tidak diizinkan -> jangan set Access-Control-Allow-Origin atau kembalikan 403 untuk OPTIONS/GET/POST khususnya
-//     // Kita tetap lanjutkan supaya response memiliki no-cors di browser (browser akan block client-side).
-//   }
-
-//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-//   // Handle preflight request
-//   if (req.method === 'OPTIONS') {
-//     return res.status(200).end();
-//   }
-
-//   if (req.method !== 'POST') return res.status(405).json({ message: 'Method tidak diizinkan' });
-
-//   const {
-//     pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
-//     beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan
-//   } = req.body;
-
-//   if (!pasienId) return res.status(400).json({ message: 'pasienId wajib diisi' });
-
-//   try {
-//     const pool = getPool();
-//     await pool.query(
-//       `INSERT INTO proses_assessment (
-//         pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
-//         beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan, createdAt
-//       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-//       [pasienId, denyutJantung || null, pernapasan || null, suhu || null, tingkatKesadaran || null, tekananSistol || null, tekananDiastol || null, beratBadan || null, tinggiBadan || null, keluhan || null, riwayatPenyakit || null, riwayatAlergi || null, riwayatPengobatan || null, pemeriksaan ? JSON.stringify(pemeriksaan) : null]
-//     );
-
-//     return res.status(200).json({ message: 'Data assessment berhasil disimpan.' });
-//   } catch (error) {
-//     console.error('🔥 SQL Error (saveProsesAssessment):', error);
-//     return res.status(500).json({ message: 'Terjadi kesalahan saat menyimpan data.', error: error?.message ?? String(error) });
-//   }
-// }
-
-
-
-// minimal changes — hanya tambah logging & safe stringify
 import { getPool } from '@/lib/db';
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://emr-ueu.web.app',
-  'https://emr-ueu.firebaseapp.com',
+  'https://emr-ueu.firebaseapp.com', // jika perlu
+  // tambahkan origin lain yang harus diizinkan
 ];
-
-function safeStringify(obj) {
-  try { return JSON.stringify(obj); }
-  catch (e) { console.warn('[safeStringify] failed stringify:', e?.message); return null; }
-}
 
 export default async function handler(req, res) {
   const origin = req.headers.origin;
-  // (CORS same seperti semula)
+
+  // Set CORS headers if origin is allowed
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+    // Jika front-end butuh mengirim cookie/session, aktifkan credentials dan pastikan origin bukan '*'
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   } else if (!origin) {
+    // Permintaan server-to-server (curl, internal) mungkin tidak punya origin -> izinkan
+    // res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
+  } else {
+    // Origin tidak diizinkan -> jangan set Access-Control-Allow-Origin atau kembalikan 403 untuk OPTIONS/GET/POST khususnya
+    // Kita tetap lanjutkan supaya response memiliki no-cors di browser (browser akan block client-side).
   }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method tidak diizinkan' });
-
-  // --- tambahan: log body (ringkas)
-  try {
-    const logBody = typeof req.body === 'object' ? { ...req.body } : req.body;
-    if (logBody?.pemeriksaan && String(logBody.pemeriksaan).length > 800) {
-      logBody.pemeriksaan = `[truncated length=${String(logBody.pemeriksaan).length}]`;
-    }
-    console.log('[saveProsesAssessment] origin:', origin, 'body:', JSON.stringify(logBody));
-  } catch (e) {
-    console.log('[saveProsesAssessment] gagal logging body:', e?.message);
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
+
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method tidak diizinkan' });
 
   const {
     pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
     beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan
-  } = req.body || {};
+  } = req.body;
 
   if (!pasienId) return res.status(400).json({ message: 'pasienId wajib diisi' });
 
-  // --- tambahan: cek getPool
-  let pool;
   try {
-    pool = getPool();
-    if (!pool) throw new Error('DB pool undefined');
-  } catch (err) {
-    console.error('[saveProsesAssessment] getPool error:', err);
-    return res.status(500).json({ message: 'DB connection error. Periksa env var dan koneksi DB.', error: String(err?.message || err) });
-  }
-
-  const pemeriksaanJson = pemeriksaan ? safeStringify(pemeriksaan) : null;
-
-  try {
+    const pool = getPool();
+    // await pool.query(
+    //   `INSERT INTO proses_assessment (
+    //     pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
+    //     beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan, createdAt
+    //   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    //   [pasienId, denyutJantung || null, pernapasan || null, suhu || null, tingkatKesadaran || null, tekananSistol || null, tekananDiastol || null, beratBadan || null, tinggiBadan || null, keluhan || null, riwayatPenyakit || null, riwayatAlergi || null, riwayatPengobatan || null, pemeriksaan ? JSON.stringify(pemeriksaan) : null]
+    // );
     await pool.query(
       `INSERT INTO proses_assessment (
         pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
-        beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan, createdAt
+        beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [pasienId, denyutJantung || null, pernapasan || null, suhu || null, tingkatKesadaran || null, tekananSistol || null, tekananDiastol || null, beratBadan || null, tinggiBadan || null, keluhan || null, riwayatPenyakit || null, riwayatAlergi || null, riwayatPengobatan || null, pemeriksaanJson]
+      [pasienId, denyutJantung || null, pernapasan || null, suhu || null, tingkatKesadaran || null, tekananSistol || null, tekananDiastol || null, beratBadan || null, tinggiBadan || null, keluhan || null, riwayatPenyakit || null, riwayatAlergi || null, riwayatPengobatan || null, pemeriksaan ? JSON.stringify(pemeriksaan) : null]
     );
 
     return res.status(200).json({ message: 'Data assessment berhasil disimpan.' });
@@ -173,3 +101,82 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Terjadi kesalahan saat menyimpan data.', error: error?.message ?? String(error) });
   }
 }
+
+
+
+// minimal changes — hanya tambah logging & safe stringify
+// import { getPool } from '@/lib/db';
+
+// const ALLOWED_ORIGINS = [
+//   'http://localhost:3000',
+//   'http://127.0.0.1:3000',
+//   'https://emr-ueu.web.app',
+//   'https://emr-ueu.firebaseapp.com',
+// ];
+
+// function safeStringify(obj) {
+//   try { return JSON.stringify(obj); }
+//   catch (e) { console.warn('[safeStringify] failed stringify:', e?.message); return null; }
+// }
+
+// export default async function handler(req, res) {
+//   const origin = req.headers.origin;
+//   // (CORS same seperti semula)
+//   if (origin && ALLOWED_ORIGINS.includes(origin)) {
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Vary', 'Origin');
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   } else if (!origin) {
+//     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
+//   }
+//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+//   if (req.method === 'OPTIONS') return res.status(200).end();
+//   if (req.method !== 'POST') return res.status(405).json({ message: 'Method tidak diizinkan' });
+
+//   // --- tambahan: log body (ringkas)
+//   try {
+//     const logBody = typeof req.body === 'object' ? { ...req.body } : req.body;
+//     if (logBody?.pemeriksaan && String(logBody.pemeriksaan).length > 800) {
+//       logBody.pemeriksaan = `[truncated length=${String(logBody.pemeriksaan).length}]`;
+//     }
+//     console.log('[saveProsesAssessment] origin:', origin, 'body:', JSON.stringify(logBody));
+//   } catch (e) {
+//     console.log('[saveProsesAssessment] gagal logging body:', e?.message);
+//   }
+
+//   const {
+//     pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
+//     beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan
+//   } = req.body || {};
+
+//   if (!pasienId) return res.status(400).json({ message: 'pasienId wajib diisi' });
+
+//   // --- tambahan: cek getPool
+//   let pool;
+//   try {
+//     pool = getPool();
+//     if (!pool) throw new Error('DB pool undefined');
+//   } catch (err) {
+//     console.error('[saveProsesAssessment] getPool error:', err);
+//     return res.status(500).json({ message: 'DB connection error. Periksa env var dan koneksi DB.', error: String(err?.message || err) });
+//   }
+
+//   const pemeriksaanJson = pemeriksaan ? safeStringify(pemeriksaan) : null;
+
+//   try {
+//     await pool.query(
+//       `INSERT INTO proses_assessment (
+//         pasienId, denyutJantung, pernapasan, suhu, tingkatKesadaran, tekananSistol, tekananDiastol,
+//         beratBadan, tinggiBadan, keluhan, riwayatPenyakit, riwayatAlergi, riwayatPengobatan, pemeriksaan, createdAt
+//       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+//       [pasienId, denyutJantung || null, pernapasan || null, suhu || null, tingkatKesadaran || null, tekananSistol || null, tekananDiastol || null, beratBadan || null, tinggiBadan || null, keluhan || null, riwayatPenyakit || null, riwayatAlergi || null, riwayatPengobatan || null, pemeriksaanJson]
+//     );
+
+//     return res.status(200).json({ message: 'Data assessment berhasil disimpan.' });
+//   } catch (error) {
+//     console.error('🔥 SQL Error (saveProsesAssessment):', error);
+//     return res.status(500).json({ message: 'Terjadi kesalahan saat menyimpan data.', error: error?.message ?? String(error) });
+//   }
+// }
