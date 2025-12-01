@@ -814,7 +814,129 @@
 
 
 
-//backend login api dengan cors dan otp serta bcrypt
+// //backend login api dengan cors dan otp serta bcrypt
+// // src/pages/api/login.js
+// import { getPool } from '@/lib/db';
+// import bcrypt from 'bcryptjs';
+// import { setCookie } from 'nookies';
+
+// // Allowed origins untuk CORS (bisa di-set via env BACKEND_ALLOWED_ORIGINS)
+// const ALLOWED_ORIGINS = (process.env.BACKEND_ALLOWED_ORIGINS || 'http://localhost:3000,https://emr-ueu.web.app')
+//   .split(',')
+//   .map(s => s.trim())
+//   .filter(Boolean);
+
+// function applyCors(req, res) {
+//   const origin = req.headers.origin;
+
+//   // Selalu beri tahu browser bahwa response bervariasi berdasarkan Origin
+//   res.setHeader('Vary', 'Origin');
+  
+
+//   if (!origin) {
+//     // request server-to-server / tools (curl). Jangan set credentials di kasus ini.
+//     // res.setHeader('Access-Control-Allow-Origin', '*');
+//     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
+//     res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+//     return;
+//   }
+
+//   // Jika origin di whitelist -> set header spesifik origin + izinkan credentials
+//   if (ALLOWED_ORIGINS.includes(origin)) {
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Access-Control-Allow-Credentials', 'true'); // supaya browser mengirim cookie
+//     res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+//     res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
+
+//     return;
+//   }
+
+//   // Default: tidak set Access-Control-Allow-Origin (browser akan blokir)
+//   // (kita sengaja tidak mengirim header kalau origin tidak diizinkan)
+// }
+
+// export default async function handler(req, res) {
+//   try {
+//     // Pasang header CORS sesuai origin
+//     applyCors(req, res);
+
+//     // Preflight request (OPTIONS)
+//     if (req.method === 'OPTIONS') {
+//       return res.status(204).end();
+//     }
+
+//     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+//     const { username, password, otp } = req.body;
+//     if (!username || !password || !otp) return res.status(400).json({ message: 'Harap isi semua field' });
+
+//     const pool = getPool();
+//     if (!pool) return res.status(500).json({ message: 'DB connection error' });
+
+//     // Ambil user
+//     const [users] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+//     if (!Array.isArray(users) || users.length === 0) return res.status(401).json({ message: 'Username tidak ditemukan' });
+
+//     const user = users[0];
+
+//     // Cek login attempts terakhir 15 menit
+//     const [attemptsRows] = await pool.query(
+//       `SELECT COUNT(*) as failedAttempts
+//        FROM login_attempts
+//        WHERE username = ? AND success = 0 AND attempt_time > (NOW() - INTERVAL 15 MINUTE)`,
+//       [username]
+//     );
+//     const failedAttempts = attemptsRows?.[0]?.failedAttempts ?? 0;
+//     if (failedAttempts >= 3) return res.status(429).json({ message: 'Terlalu banyak percobaan gagal. Coba lagi nanti.' });
+
+//     // Cek password
+//     const storedPassword = user.password ?? '';
+//     let isPasswordValid = false;
+//     try {
+//       isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
+//     } catch (err) {
+//       // fallback jika password tidak ter-hash (legacy)
+//       isPasswordValid = String(password).trim() === String(storedPassword);
+//     }
+
+//     if (!isPasswordValid) {
+//       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
+//       return res.status(401).json({ message: 'Password salah' });
+//     }
+
+//     // Cek OTP (sesuaikan logic OTP kamu)
+//     const userOtpSecret = user.otp_secret ?? user.otp ?? null;
+//     if (!userOtpSecret || String(userOtpSecret) !== String(otp)) {
+//       await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 0, NOW())', [username]);
+//       return res.status(401).json({ message: 'OTP tidak valid' });
+//     }
+
+//     // Update last login + simpan login attempt sukses
+//     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+//     await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 1, NOW())', [username]);
+
+//     // Set cookie cross-site (httpOnly). Pastikan sameSite:none + secure:true di production
+//     setCookie({ res }, 'userRole', String(user.role || 'user'), {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === 'production',
+//       sameSite: 'none',
+//       path: '/',
+//       maxAge: 30 * 60, // 30 menit
+//     });
+
+//     // Kembalikan role juga agar frontend bisa langsung set UI (opsional)
+//     return res.status(200).json({ message: 'Login berhasil', role: user.role || 'user' });
+
+//   } catch (error) {
+//     console.error('❌ API Login Error:', error);
+//     return res.status(500).json({ message: 'Terjadi kesalahan' });
+//   }
+// }
+
+
+
 // src/pages/api/login.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
@@ -857,6 +979,11 @@ function applyCors(req, res) {
   // (kita sengaja tidak mengirim header kalau origin tidak diizinkan)
 }
 
+function looksLikeBcryptHash(s) {
+  if (!s || typeof s !== 'string') return false;
+  return /^\$2[aby]\$\d{2}\$.{53}$/.test(s);
+}
+
 export default async function handler(req, res) {
   try {
     // Pasang header CORS sesuai origin
@@ -869,7 +996,7 @@ export default async function handler(req, res) {
 
     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
-    const { username, password, otp } = req.body;
+    const { username, password, otp, isHash } = req.body || {};
     if (!username || !password || !otp) return res.status(400).json({ message: 'Harap isi semua field' });
 
     const pool = getPool();
@@ -894,11 +1021,23 @@ export default async function handler(req, res) {
     // Cek password
     const storedPassword = user.password ?? '';
     let isPasswordValid = false;
+
     try {
-      isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
+      // Jika client memberi tahu bahwa ia memasukkan hash langsung, bandingkan string hash langsung
+      if (isHash === true || looksLikeBcryptHash(String(password))) {
+        // bandingkan literal (hash string) — aman hanya jika client dipercaya
+        if (String(password).trim() === String(storedPassword).trim()) {
+          isPasswordValid = true;
+        } else {
+          isPasswordValid = false;
+        }
+      } else {
+        // normal: compare plain candidate password vs stored hashed password
+        isPasswordValid = await bcrypt.compare(String(password).trim(), String(storedPassword));
+      }
     } catch (err) {
-      // fallback jika password tidak ter-hash (legacy)
-      isPasswordValid = String(password).trim() === String(storedPassword);
+      // fallback jika terjadi error di bcrypt.compare
+      isPasswordValid = String(password).trim() === String(storedPassword).trim();
     }
 
     if (!isPasswordValid) {
@@ -916,6 +1055,14 @@ export default async function handler(req, res) {
     // Update last login + simpan login attempt sukses
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
     await pool.query('INSERT INTO login_attempts (username, success, attempt_time) VALUES (?, 1, NOW())', [username]);
+
+    // Optionally: bersihkan failed attempts older untuk kenyamanan (tidak wajib)
+    try {
+      await pool.query('DELETE FROM login_attempts WHERE username = ? AND success = 0', [username]);
+    } catch (e) {
+      // ignore if delete fails
+      console.warn('Could not delete failed attempts:', e && e.message);
+    }
 
     // Set cookie cross-site (httpOnly). Pastikan sameSite:none + secure:true di production
     setCookie({ res }, 'userRole', String(user.role || 'user'), {
