@@ -231,7 +231,7 @@
 // }
 
 
-
+//backend-emr-esa/src/pages/api/register.js
 // src/pages/api/register.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
@@ -298,7 +298,7 @@ export default async function handler(req, res) {
     // lakukan insert — laporkan kolom yang dipakai agar tidak error karena schema mismatch
     // const insertSql = 'INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())';
     // const params = [username, hashedPassword, role, otp_secret];
-    const insertSql = 'INSERT INTO users (username, password, role, otp_secret) VALUES (?, ?, ?, NOW())';
+    const insertSql = 'INSERT INTO users (username, password, role, otp_secret) VALUES (?, ?, ?, ?)';
     const params = [username, hashedPassword, role, otp_secret];
 
     let result;
@@ -315,7 +315,7 @@ export default async function handler(req, res) {
     try {
       await pool.query(
         // 'INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())',
-        'INSERT INTO audit_logs (user_id, action, table_name, record_id) VALUES (?, ?, ?, NOW())',
+        'INSERT INTO audit_logs (user_id, action, table_name, record_id) VALUES (?, ?, ?, ?)',
         [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]
       );
     } catch (auditErr) {
