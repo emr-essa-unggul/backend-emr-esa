@@ -165,67 +165,170 @@
 //   }
 // }
 
+//backend-emr-esa/src/pages/api/register.js
+// src/pages/api/register.js
+// import { getPool } from '@/lib/db';
+// import bcrypt from 'bcryptjs';
+
+// const ALLOWED_ORIGINS = [
+//   'http://localhost:3000',
+//   'http://127.0.0.1:3000',
+//   'https://emr-ueu.web.app',
+//   'https://emr-ueu.firebaseapp.com', // jika perlu
+//   // tambahkan origin lain yang harus diizinkan
+// ];
+
+// export default async function handler(req, res) {
+//   const origin = req.headers.origin;
+
+//   // Set CORS headers if origin is allowed
+//   if (origin && ALLOWED_ORIGINS.includes(origin)) {
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Vary', 'Origin');
+//     // Jika front-end butuh mengirim cookie/session, aktifkan credentials dan pastikan origin bukan '*'
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   } else if (!origin) {
+//     // Permintaan server-to-server (curl, internal) mungkin tidak punya origin -> izinkan
+//     // res.setHeader('Access-Control-Allow-Origin', '*');
+//     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
+//   } else {
+//     // Origin tidak diizinkan -> jangan set Access-Control-Allow-Origin atau kembalikan 403 untuk OPTIONS/GET/POST khususnya
+//     // Kita tetap lanjutkan supaya response memiliki no-cors di browser (browser akan block client-side).
+//   }
+
+//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+//   // Handle preflight request
+//   if (req.method === 'OPTIONS') {
+//     return res.status(200).end();
+//   }
+
+//   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+//   const { username, password, role, otp_secret } = req.body;
+//   if (!username || !password || !role || !otp_secret) return res.status(400).json({ message: 'Harap isi semua field' });
+
+//   const policy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/;
+//   if (!policy.test(password)) return res.status(400).json({ message: 'Password tidak memenuhi ketentuan keamanan' });
+
+//   try {
+//     const pool = getPool();
+//     const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+//     if (existing && existing.length > 0) return res.status(400).json({ message: 'Username sudah digunakan' });
+
+//     const hashedPassword = await bcrypt.hash(password.trim(), 10);
+//     const [result] = await pool.query('INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())', [username, hashedPassword, role, otp_secret]);
+
+//     // Audit log (user_id bisa diisi id baru jika perlu)
+//     await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())', [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]);
+
+//     return res.status(200).json({ message: 'Registrasi berhasil' });
+//   } catch (error) {
+//     console.error('❌ Error API Register:', error);
+//     return res.status(500).json({ message: 'Terjadi kesalahan' });
+//   }
+// }
+
+
 
 // src/pages/api/register.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
+// allowed origins (sesuaikan env jika perlu)
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://emr-ueu.web.app',
-  'https://emr-ueu.firebaseapp.com', // jika perlu
-  // tambahkan origin lain yang harus diizinkan
+  'https://emr-ueu.firebaseapp.com',
 ];
 
-export default async function handler(req, res) {
+function applyCors(req, res) {
   const origin = req.headers.origin;
-
-  // Set CORS headers if origin is allowed
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    // Jika front-end butuh mengirim cookie/session, aktifkan credentials dan pastikan origin bukan '*'
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else if (!origin) {
-    // Permintaan server-to-server (curl, internal) mungkin tidak punya origin -> izinkan
-    // res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Vary', 'Origin');
+  if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
-  } else {
-    // Origin tidak diizinkan -> jangan set Access-Control-Allow-Origin atau kembalikan 403 untuk OPTIONS/GET/POST khususnya
-    // Kita tetap lanjutkan supaya response memiliki no-cors di browser (browser akan block client-side).
+    return;
   }
-
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
 
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
-
-  const { username, password, role, otp_secret } = req.body;
-  if (!username || !password || !role || !otp_secret) return res.status(400).json({ message: 'Harap isi semua field' });
-
-  const policy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/;
-  if (!policy.test(password)) return res.status(400).json({ message: 'Password tidak memenuhi ketentuan keamanan' });
-
+export default async function handler(req, res) {
   try {
+    applyCors(req, res);
+
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+    // sangat berguna untuk debug: log body singkat (jangan log password di prod)
+    console.log('REGISTER body keys:', Object.keys(req.body));
+
+    const { username, password, role, otp_secret } = req.body || {};
+    if (!username || !password || !role || !otp_secret) {
+      console.warn('Missing fields:', { username, role, hasPassword: !!password, hasOtp: !!otp_secret });
+      return res.status(400).json({ message: 'Harap isi semua field' });
+    }
+
+    const policy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/;
+    if (!policy.test(password)) {
+      return res.status(400).json({ message: 'Password tidak memenuhi ketentuan keamanan' });
+    }
+
     const pool = getPool();
-    const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
-    if (existing && existing.length > 0) return res.status(400).json({ message: 'Username sudah digunakan' });
+    if (!pool) {
+      console.error('DB pool is falsy');
+      return res.status(500).json({ message: 'DB connection error (pool missing)' });
+    }
 
-    const hashedPassword = await bcrypt.hash(password.trim(), 10);
-    const [result] = await pool.query('INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())', [username, hashedPassword, role, otp_secret]);
+    // cek username exist
+    const [existing] = await pool.query('SELECT id FROM users WHERE username = ? LIMIT 1', [username]);
+    if (Array.isArray(existing) && existing.length > 0) {
+      return res.status(400).json({ message: 'Username sudah digunakan' });
+    }
 
-    // Audit log (user_id bisa diisi id baru jika perlu)
-    await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())', [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]);
+    // hash password
+    const hashedPassword = await bcrypt.hash(String(password).trim(), 10);
 
-    return res.status(200).json({ message: 'Registrasi berhasil' });
+    // lakukan insert — laporkan kolom yang dipakai agar tidak error karena schema mismatch
+    const insertSql = 'INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())';
+    const params = [username, hashedPassword, role, otp_secret];
+
+    let result;
+    try {
+      [result] = await pool.query(insertSql, params);
+    } catch (sqlErr) {
+      // tangkap error SQL detail untuk debugging
+      console.error('SQL INSERT error:', sqlErr && sqlErr.code, sqlErr && sqlErr.sqlMessage);
+      // kirim pesan user-friendly + code untuk admin debugging
+      return res.status(500).json({ message: 'DB insert error', detail: sqlErr && sqlErr.message });
+    }
+
+    // audit log (jangan blokir register jika audit gagal — tapi log)
+    try {
+      await pool.query(
+        'INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())',
+        [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]
+      );
+    } catch (auditErr) {
+      console.warn('Audit log failed:', auditErr && auditErr.message);
+      // continue tanpa mengembalikan error
+    }
+
+    // sukses — kembalikan hashedPassword juga (berguna untuk debug/frontend)
+    return res.status(200).json({
+      message: 'Registrasi berhasil',
+      insertedId: result.insertId || null,
+      hashedPassword,
+    });
   } catch (error) {
-    console.error('❌ Error API Register:', error);
-    return res.status(500).json({ message: 'Terjadi kesalahan' });
+    // stack lengkap agar bisa dibaca di logs Vercel/Railway
+    console.error('❌ Error API Register (handler):', error && error.stack ? error.stack : error);
+    return res.status(500).json({ message: 'Terjadi kesalahan', error: String(error && error.message ? error.message : error) });
   }
 }
