@@ -231,7 +231,115 @@
 // }
 
 
-//backend-emr-esa/src/pages/api/register.js
+// //backend-emr-esa/src/pages/api/register.js //JANGAN DIAPA2 IN YAA KI INI YANG UDAH FIXXX
+// // src/pages/api/register.js
+// import { getPool } from '@/lib/db';
+// import bcrypt from 'bcryptjs';
+
+// // allowed origins (sesuaikan env jika perlu)
+// const ALLOWED_ORIGINS = [
+//   'http://localhost:3000',
+//   'http://127.0.0.1:3000',
+//   'https://emr-ueu.web.app',
+//   'https://emr-ueu.firebaseapp.com',
+// ];
+
+// function applyCors(req, res) {
+//   const origin = req.headers.origin;
+//   res.setHeader('Vary', 'Origin');
+//   if (!origin) {
+//     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
+//     return;
+//   }
+//   if (ALLOWED_ORIGINS.includes(origin)) {
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   }
+//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+// }
+
+// export default async function handler(req, res) {
+//   try {
+//     applyCors(req, res);
+
+//     if (req.method === 'OPTIONS') return res.status(200).end();
+//     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+//     // sangat berguna untuk debug: log body singkat (jangan log password di prod)
+//     console.log('REGISTER body keys:', Object.keys(req.body));
+
+//     const { username, password, role, otp_secret } = req.body || {};
+//     if (!username || !password || !role || !otp_secret) {
+//       console.warn('Missing fields:', { username, role, hasPassword: !!password, hasOtp: !!otp_secret });
+//       return res.status(400).json({ message: 'Harap isi semua field' });
+//     }
+
+//     const policy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/;
+//     if (!policy.test(password)) {
+//       return res.status(400).json({ message: 'Password tidak memenuhi ketentuan keamanan' });
+//     }
+
+//     const pool = getPool();
+//     if (!pool) {
+//       console.error('DB pool is falsy');
+//       return res.status(500).json({ message: 'DB connection error (pool missing)' });
+//     }
+
+//     // cek username exist
+//     const [existing] = await pool.query('SELECT id FROM users WHERE username = ? LIMIT 1', [username]);
+//     if (Array.isArray(existing) && existing.length > 0) {
+//       return res.status(400).json({ message: 'Username sudah digunakan' });
+//     }
+
+//     // hash password
+//     const hashedPassword = await bcrypt.hash(String(password).trim(), 10);
+
+//     // lakukan insert — laporkan kolom yang dipakai agar tidak error karena schema mismatch
+//     // const insertSql = 'INSERT INTO users (username, password, role, otp_secret, created_at) VALUES (?, ?, ?, ?, NOW())';
+//     // const params = [username, hashedPassword, role, otp_secret];
+//     const insertSql = 'INSERT INTO users (username, password, role, otp_secret) VALUES (?, ?, ?, ?)';
+//     const params = [username, hashedPassword, role, otp_secret];
+
+//     let result;
+//     try {
+//       [result] = await pool.query(insertSql, params);
+//     } catch (sqlErr) {
+//       // tangkap error SQL detail untuk debugging
+//       console.error('SQL INSERT error:', sqlErr && sqlErr.code, sqlErr && sqlErr.sqlMessage);
+//       // kirim pesan user-friendly + code untuk admin debugging
+//       return res.status(500).json({ message: 'DB insert error', detail: sqlErr && sqlErr.message });
+//     }
+
+//     // audit log (jangan blokir register jika audit gagal — tapi log)
+//     try {
+//       await pool.query(
+//         // 'INSERT INTO audit_logs (user_id, action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?, NOW())',
+//         'INSERT INTO audit_logs (user_id, action, table_name, record_id) VALUES (?, ?, ?, ?)',
+//         [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]
+//       );
+//     } catch (auditErr) {
+//       console.warn('Audit log failed:', auditErr && auditErr.message);
+//       // continue tanpa mengembalikan error
+//     }
+
+//     // sukses — kembalikan hashedPassword juga (berguna untuk debug/frontend)
+//     return res.status(200).json({
+//       message: 'Registrasi berhasil',
+//       insertedId: result.insertId || null,
+//       hashedPassword,
+//     });
+//   } catch (error) {
+//     // stack lengkap agar bisa dibaca di logs Vercel/Railway
+//     console.error('❌ Error API Register (handler):', error && error.stack ? error.stack : error);
+//     return res.status(500).json({ message: 'Terjadi kesalahan', error: String(error && error.message ? error.message : error) });
+//   }
+// }
+
+
+
+
+// backend-emr-esa/src/pages/api/register.js
 // src/pages/api/register.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
@@ -259,6 +367,29 @@ function applyCors(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || 'YOUR_RECAPTCHA_SECRET';
+
+async function verifyRecaptcha(token, remoteip = null) {
+  if (!token) return { success: false, message: 'No token provided' };
+  const params = new URLSearchParams();
+  params.append('secret', RECAPTCHA_SECRET);
+  params.append('response', token);
+  if (remoteip) params.append('remoteip', remoteip);
+
+  try {
+    const resp = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const data = await resp.json();
+    return data; // { success: boolean, score?, action?, ... }
+  } catch (err) {
+    console.error('reCAPTCHA verify error:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
 export default async function handler(req, res) {
   try {
     applyCors(req, res);
@@ -269,10 +400,23 @@ export default async function handler(req, res) {
     // sangat berguna untuk debug: log body singkat (jangan log password di prod)
     console.log('REGISTER body keys:', Object.keys(req.body));
 
-    const { username, password, role, otp_secret } = req.body || {};
+    const { username, password, role, otp_secret, recaptchaToken } = req.body || {};
     if (!username || !password || !role || !otp_secret) {
       console.warn('Missing fields:', { username, role, hasPassword: !!password, hasOtp: !!otp_secret });
       return res.status(400).json({ message: 'Harap isi semua field' });
+    }
+
+    // verify reCAPTCHA token (jika RECAPTCHA_SECRET belum diset, kita hanya log dan tolak request)
+    if (!RECAPTCHA_SECRET || RECAPTCHA_SECRET === 'YOUR_RECAPTCHA_SECRET') {
+      console.warn('RECAPTCHA secret not configured on server. Set RECAPTCHA_SECRET_KEY env var.');
+      // Jika ingin tetap mengizinkan saat secret tidak tersedia, ubah kebijakan di sini.
+      return res.status(500).json({ message: 'Server reCAPTCHA belum dikonfigurasi' });
+    }
+
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null);
+    if (!recaptchaResult || !recaptchaResult.success) {
+      console.warn('reCAPTCHA failed:', recaptchaResult);
+      return res.status(400).json({ message: 'Gagal verifikasi reCAPTCHA' });
     }
 
     const policy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/;
