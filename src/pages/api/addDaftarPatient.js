@@ -168,41 +168,53 @@ export default async function handler(req, res) {
     //   tandaTangan || null,
     // ];
 
+    // const sql = `
+    //   INSERT INTO daftarpatients (
+    //     no_rm,
+    //     nama_lengkap,
+    //     nik,
+    //     nomor_identitas_lain,
+    //     jenis_identitas_lain,
+    //     tempat_lahir,
+    //     tanggal_lahir,
+    //     jenisKelamin,
+    //     nama_ibu_kandung,
+    //     agama,
+    //     statusPernikahan,
+    //     pendidikan,
+    //     pekerjaan,
+    //     golonganDarah,
+    //     suku,
+    //     bahasa,
+    //     kewarganegaraan,
+    //     alamat,
+    //     kelurahan_desa,
+    //     kecamatan,
+    //     kota_kabupaten,
+    //     provinsi,
+    //     rt,
+    //     rw,
+    //     kodePos,
+    //     no_telepon_pribadi,
+    //     no_telepon_rumah,
+    //     jenis_penjamin,
+    //     no_penjamin,
+    //     tandaTangan,
+    //     tanggal_persetujuan
+    //   ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    // `;
+
     const sql = `
-      INSERT INTO daftarpatients (
-        no_rm,
-        nama_lengkap,
-        nik,
-        nomor_identitas_lain,
-        jenis_identitas_lain,
-        tempat_lahir,
-        tanggal_lahir,
-        jenisKelamin,
-        nama_ibu_kandung,
-        agama,
-        statusPernikahan,
-        pendidikan,
-        pekerjaan,
-        golonganDarah,
-        suku,
-        bahasa,
-        kewarganegaraan,
-        alamat,
-        kelurahan_desa,
-        kecamatan,
-        kota_kabupaten,
-        provinsi,
-        rt,
-        rw,
-        kodePos,
-        no_telepon_pribadi,
-        no_telepon_rumah,
-        jenis_penjamin,
-        no_penjamin,
-        tandaTangan,
-        tanggal_persetujuan
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `;
+INSERT INTO daftarpatients (
+  no_rm, nama_lengkap, nik, nomor_identitas_lain, jenis_identitas_lain,
+  tempat_lahir, tanggal_lahir, jenisKelamin, nama_ibu_kandung, agama,
+  statusPernikahan, pendidikan, pekerjaan, golonganDarah, suku,
+  bahasa, kewarganegaraan, alamat, kelurahan_desa, kecamatan,
+  kota_kabupaten, provinsi, rt, rw, kodePos,
+  no_telepon_pribadi, no_telepon_rumah, jenis_penjamin, no_penjamin,
+  tandaTangan, tanggal_persetujuan
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+
 
     const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -240,6 +252,24 @@ export default async function handler(req, res) {
 //   tanggal_persetujuan || currentDate, // fallback sekarang jika null
 // ];
 
+// const jenisKelaminEnum = ['Laki-laki','Perempuan','Tidak diketahui','Tidak dapat ditentukan','Tidak mengisi'];
+// const jenisKelaminVal = jenisKelaminEnum.includes(jenisKelamin) ? jenisKelamin : 'Tidak diketahui';
+
+// const golonganDarahEnum = ['A','B','AB','O'];
+// const golonganDarahVal = golonganDarahEnum.includes(golonganDarah) ? golonganDarah : 'O';
+
+// const agamaEnum = ['Islam','Kristen','Katolik','Hindu','Buddha','Khonghucu','Kepercayaan','Lainnya'];
+// const agamaVal = agamaEnum.includes(agama) ? agama : 'Lainnya';
+
+// const pendidikanEnum = ['Tidak sekolah','SD','SMP','SMA','D1','D2','D3','S1','S2','S3'];
+// const pendidikanVal = pendidikanEnum.includes(pendidikan) ? pendidikan : 'Tidak sekolah';
+
+// const bahasaEnum = ['Indonesia','Daerah','Inggris','Lainnya'];
+// const bahasaVal = bahasaEnum.includes(bahasa) ? bahasa : 'Indonesia';
+
+// const jenisPenjaminEnum = ['Umum','BPJS','Asuransi','Perusahaan'];
+// const jenisPenjaminVal = jenisPenjaminEnum.includes(jenis_penjamin) ? jenis_penjamin : 'Umum';
+
 const jenisKelaminEnum = ['Laki-laki','Perempuan','Tidak diketahui','Tidak dapat ditentukan','Tidak mengisi'];
 const jenisKelaminVal = jenisKelaminEnum.includes(jenisKelamin) ? jenisKelamin : 'Tidak diketahui';
 
@@ -249,47 +279,66 @@ const golonganDarahVal = golonganDarahEnum.includes(golonganDarah) ? golonganDar
 const agamaEnum = ['Islam','Kristen','Katolik','Hindu','Buddha','Khonghucu','Kepercayaan','Lainnya'];
 const agamaVal = agamaEnum.includes(agama) ? agama : 'Lainnya';
 
+const statusPernikahanEnum = ['Belum Kawin','Kawin','Cerai Hidup','Cerai Mati'];
+const statusPernikahanVal = statusPernikahanEnum.includes(statusPernikahan) ? statusPernikahan : 'Belum Kawin';
+
 const pendidikanEnum = ['Tidak sekolah','SD','SMP','SMA','D1','D2','D3','S1','S2','S3'];
 const pendidikanVal = pendidikanEnum.includes(pendidikan) ? pendidikan : 'Tidak sekolah';
 
 const bahasaEnum = ['Indonesia','Daerah','Inggris','Lainnya'];
 const bahasaVal = bahasaEnum.includes(bahasa) ? bahasa : 'Indonesia';
 
+const kewarganegaraanEnum = ['WNI','WNA'];
+const kewarganegaraanVal = kewarganegaraanEnum.includes(kewarganegaraan) ? kewarganegaraan : 'WNI';
+
 const jenisPenjaminEnum = ['Umum','BPJS','Asuransi','Perusahaan'];
 const jenisPenjaminVal = jenisPenjaminEnum.includes(jenis_penjamin) ? jenis_penjamin : 'Umum';
 
+const tanggal_lahir_val = tanggal_lahir ? tanggal_lahir.split('T')[0] : null;
+const tanggal_persetujuan_val = tanggal_persetujuan ? tanggal_persetujuan.split('T')[0] : new Date().toISOString().split('T')[0];
+
+// const values = [
+//   no_rm,
+//   nama_lengkap,
+//   nik || null,
+//   nomor_identitas_lain || null,
+//   jenis_identitas_lain || null,
+//   tempat_lahir || null,
+//   tanggal_lahir ? tanggal_lahir.split('T')[0] : null,
+//   jenisKelaminVal,
+//   nama_ibu_kandung || null,
+//   agamaVal,
+//   statusPernikahan || 'Belum Kawin',
+//   pendidikanVal,
+//   pekerjaan || null,
+//   golonganDarahVal,
+//   suku || null,
+//   bahasaVal,
+//   kewarganegaraan || 'WNI',
+//   alamat || null,
+//   kelurahan_desa || null,
+//   kecamatan || null,
+//   kota_kabupaten || null,
+//   provinsi || null,
+//   rt || null,
+//   rw || null,
+//   kodePos || null,
+//   no_telepon_pribadi || null,
+//   no_telepon_rumah || null,
+//   jenisPenjaminVal,
+//   no_penjamin || null,
+//   tandaTangan || null,
+//   tanggal_persetujuan ? tanggal_persetujuan.split('T')[0] : currentDate,
+// ];
+
 const values = [
-  no_rm,
-  nama_lengkap,
-  nik || null,
-  nomor_identitas_lain || null,
-  jenis_identitas_lain || null,
-  tempat_lahir || null,
-  tanggal_lahir ? tanggal_lahir.split('T')[0] : null,
-  jenisKelaminVal,
-  nama_ibu_kandung || null,
-  agamaVal,
-  statusPernikahan || 'Belum Kawin',
-  pendidikanVal,
-  pekerjaan || null,
-  golonganDarahVal,
-  suku || null,
-  bahasaVal,
-  kewarganegaraan || 'WNI',
-  alamat || null,
-  kelurahan_desa || null,
-  kecamatan || null,
-  kota_kabupaten || null,
-  provinsi || null,
-  rt || null,
-  rw || null,
-  kodePos || null,
-  no_telepon_pribadi || null,
-  no_telepon_rumah || null,
-  jenisPenjaminVal,
-  no_penjamin || null,
-  tandaTangan || null,
-  tanggal_persetujuan ? tanggal_persetujuan.split('T')[0] : currentDate,
+  no_rm, nama_lengkap, nik || null, nomor_identitas_lain || null, jenis_identitas_lain || null,
+  tempat_lahir || null, tanggal_lahir_val, jenisKelaminVal, nama_ibu_kandung || null, agamaVal,
+  statusPernikahanVal, pendidikanVal, pekerjaan || null, golonganDarahVal, suku || null,
+  bahasaVal, kewarganegaraanVal, alamat || null, kelurahan_desa || null, kecamatan || null,
+  kota_kabupaten || null, provinsi || null, rt || null, rw || null, kodePos || null,
+  no_telepon_pribadi || null, no_telepon_rumah || null, jenisPenjaminVal, no_penjamin || null,
+  tandaTangan || null, tanggal_persetujuan_val
 ];
 
 
