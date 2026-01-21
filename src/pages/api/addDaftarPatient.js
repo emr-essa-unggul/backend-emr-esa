@@ -240,6 +240,24 @@ export default async function handler(req, res) {
 //   tanggal_persetujuan || currentDate, // fallback sekarang jika null
 // ];
 
+const jenisKelaminEnum = ['Laki-laki','Perempuan','Tidak diketahui','Tidak dapat ditentukan','Tidak mengisi'];
+const jenisKelaminVal = jenisKelaminEnum.includes(jenisKelamin) ? jenisKelamin : 'Tidak diketahui';
+
+const golonganDarahEnum = ['A','B','AB','O'];
+const golonganDarahVal = golonganDarahEnum.includes(golonganDarah) ? golonganDarah : 'O';
+
+const agamaEnum = ['Islam','Kristen','Katolik','Hindu','Buddha','Khonghucu','Kepercayaan','Lainnya'];
+const agamaVal = agamaEnum.includes(agama) ? agama : 'Lainnya';
+
+const pendidikanEnum = ['Tidak sekolah','SD','SMP','SMA','D1','D2','D3','S1','S2','S3'];
+const pendidikanVal = pendidikanEnum.includes(pendidikan) ? pendidikan : 'Tidak sekolah';
+
+const bahasaEnum = ['Indonesia','Daerah','Inggris','Lainnya'];
+const bahasaVal = bahasaEnum.includes(bahasa) ? bahasa : 'Indonesia';
+
+const jenisPenjaminEnum = ['Umum','BPJS','Asuransi','Perusahaan'];
+const jenisPenjaminVal = jenisPenjaminEnum.includes(jenis_penjamin) ? jenis_penjamin : 'Umum';
+
 const values = [
   no_rm,
   nama_lengkap,
@@ -248,15 +266,15 @@ const values = [
   jenis_identitas_lain || null,
   tempat_lahir || null,
   tanggal_lahir ? tanggal_lahir.split('T')[0] : null,
-  jenisKelamin || 'Tidak diketahui',
+  jenisKelaminVal,
   nama_ibu_kandung || null,
-  agama || 'Lainnya',
+  agamaVal,
   statusPernikahan || 'Belum Kawin',
-  pendidikan || 'Tidak sekolah',
+  pendidikanVal,
   pekerjaan || null,
-  golonganDarah || 'O',
+  golonganDarahVal,
   suku || null,
-  bahasa || 'Indonesia',
+  bahasaVal,
   kewarganegaraan || 'WNI',
   alamat || null,
   kelurahan_desa || null,
@@ -268,11 +286,46 @@ const values = [
   kodePos || null,
   no_telepon_pribadi || null,
   no_telepon_rumah || null,
-  jenis_penjamin || 'Umum',
+  jenisPenjaminVal,
   no_penjamin || null,
   tandaTangan || null,
   tanggal_persetujuan ? tanggal_persetujuan.split('T')[0] : currentDate,
 ];
+
+
+// const values = [
+//   no_rm,
+//   nama_lengkap,
+//   nik || null,
+//   nomor_identitas_lain || null,
+//   jenis_identitas_lain || null,
+//   tempat_lahir || null,
+//   tanggal_lahir ? tanggal_lahir.split('T')[0] : null,
+//   jenisKelamin || 'Tidak diketahui',
+//   nama_ibu_kandung || null,
+//   agama || 'Lainnya',
+//   statusPernikahan || 'Belum Kawin',
+//   pendidikan || 'Tidak sekolah',
+//   pekerjaan || null,
+//   golonganDarah || 'O',
+//   suku || null,
+//   bahasa || 'Indonesia',
+//   kewarganegaraan || 'WNI',
+//   alamat || null,
+//   kelurahan_desa || null,
+//   kecamatan || null,
+//   kota_kabupaten || null,
+//   provinsi || null,
+//   rt || null,
+//   rw || null,
+//   kodePos || null,
+//   no_telepon_pribadi || null,
+//   no_telepon_rumah || null,
+//   jenis_penjamin || 'Umum',
+//   no_penjamin || null,
+//   tandaTangan || null,
+//   tanggal_persetujuan ? tanggal_persetujuan.split('T')[0] : currentDate,
+// ];
 
 
     // const values = [
