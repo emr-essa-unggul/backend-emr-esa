@@ -72,7 +72,8 @@ export default async function handler(req, res) {
   try {
     const pool = getPool();
 
-    const [rows] = await pool.query('SELECT noRM FROM daftarpatients');
+    // const [rows] = await pool.query('SELECT noRM FROM daftarpatients');
+        const [rows] = await pool.query('SELECT no_rm FROM daftarpatients');
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ message: 'Tidak ada nomor rekam medis yang ditemukan' });
