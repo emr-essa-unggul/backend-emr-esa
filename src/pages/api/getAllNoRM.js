@@ -79,7 +79,8 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'Tidak ada nomor rekam medis yang ditemukan' });
     }
 
-    const arr = rows.map(r => r.noRM);
+    // const arr = rows.map(r => r.noRM);
+        const arr = rows.map(r => r.no_rm);
     return res.status(200).json(arr);
   } catch (error) {
     console.error('🔥 SQL Error (getAllNoRM):', error);
