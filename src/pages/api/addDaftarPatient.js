@@ -455,8 +455,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method tidak diizinkan' });
   }
 
-  // Step 1: log request body
-  console.log('📥 Request body:', req.body);
+  console.log('📥 Request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const pool = getPool();
@@ -495,7 +494,19 @@ export default async function handler(req, res) {
       tanggal_persetujuan,
     } = req.body;
 
-    // Step 2: validasi enum & fallback
+    // Validasi field wajib
+    if (!no_rm || !nama_lengkap) {
+      console.error('❌ Missing required fields');
+      return res.status(400).json({ 
+        message: 'Field wajib tidak lengkap',
+        missing: {
+          no_rm: !no_rm,
+          nama_lengkap: !nama_lengkap
+        }
+      });
+    }
+
+    // Validasi enum
     const jenisKelaminEnum = ['Laki-laki','Perempuan','Tidak diketahui','Tidak dapat ditentukan','Tidak mengisi'];
     const golonganDarahEnum = ['A','B','AB','O'];
     const agamaEnum = ['Islam','Kristen','Katolik','Hindu','Buddha','Khonghucu','Kepercayaan','Lainnya'];
@@ -506,32 +517,55 @@ export default async function handler(req, res) {
     const jenisPenjaminEnum = ['Umum','BPJS','Asuransi','Perusahaan'];
 
     const jenisKelaminVal = jenisKelaminEnum.includes(jenisKelamin) ? jenisKelamin : 'Tidak diketahui';
-    const golonganDarahVal = golonganDarahEnum.includes(golonganDarah) ? golonganDarah : 'O';
-    const agamaVal = agamaEnum.includes(agama) ? agama : 'Lainnya';
-    const statusPernikahanVal = statusPernikahanEnum.includes(statusPernikahan) ? statusPernikahan : 'Belum Kawin';
-    const pendidikanVal = pendidikanEnum.includes(pendidikan) ? pendidikan : 'Tidak sekolah';
-    const bahasaVal = bahasaEnum.includes(bahasa) ? bahasa : 'Indonesia';
-    const kewarganegaraanVal = kewarganegaraanEnum.includes(kewarganegaraan) ? kewarganegaraan : 'WNI';
-    const jenisPenjaminVal = jenisPenjaminEnum.includes(jenis_penjamin) ? jenis_penjamin : 'Umum';
+    const golonganDarahVal = golonganDarah && golonganDarahEnum.includes(golonganDarah) ? golonganDarah : null;
+    const agamaVal = agama && agamaEnum.includes(agama) ? agama : null;
+    const statusPernikahanVal = statusPernikahan && statusPernikahanEnum.includes(statusPernikahan) ? statusPernikahan : null;
+    const pendidikanVal = pendidikan && pendidikanEnum.includes(pendidikan) ? pendidikan : null;
+    const bahasaVal = bahasa && bahasaEnum.includes(bahasa) ? bahasa : null;
+    const kewarganegaraanVal = kewarganegaraan && kewarganegaraanEnum.includes(kewarganegaraan) ? kewarganegaraan : null;
+    const jenisPenjaminVal = jenis_penjamin && jenisPenjaminEnum.includes(jenis_penjamin) ? jenis_penjamin : null;
 
-    // Step 3: format tanggal
+    // Format tanggal
     const tanggal_lahir_val = tanggal_lahir ? tanggal_lahir.split('T')[0] : null;
     const tanggal_persetujuan_val = tanggal_persetujuan ? tanggal_persetujuan.split('T')[0] : new Date().toISOString().split('T')[0];
 
-    // Step 4: log nilai final yang akan di-insert
     const values = [
-      no_rm, nama_lengkap, nik || null, nomor_identitas_lain || null, jenis_identitas_lain || null,
-      tempat_lahir || null, tanggal_lahir_val, jenisKelaminVal, nama_ibu_kandung || null, agamaVal,
-      statusPernikahanVal, pendidikanVal, pekerjaan || null, golonganDarahVal, suku || null,
-      bahasaVal, kewarganegaraanVal, alamat || null, kelurahan_desa || null, kecamatan || null,
-      kota_kabupaten || null, provinsi || null, rt || null, rw || null, kodePos || null,
-      no_telepon_pribadi || null, no_telepon_rumah || null, jenisPenjaminVal, no_penjamin || null,
-      tandaTangan || null, tanggal_persetujuan_val
+      no_rm,
+      nama_lengkap,
+      nik || null,
+      nomor_identitas_lain || null,
+      jenis_identitas_lain || null,
+      tempat_lahir || null,
+      tanggal_lahir_val,
+      jenisKelaminVal,
+      nama_ibu_kandung || null,
+      agamaVal,
+      statusPernikahanVal,
+      pendidikanVal,
+      pekerjaan || null,
+      golonganDarahVal,
+      suku || null,
+      bahasaVal,
+      kewarganegaraanVal,
+      alamat || null,
+      kelurahan_desa || null,
+      kecamatan || null,
+      kota_kabupaten || null,
+      provinsi || null,
+      rt || null,
+      rw || null,
+      kodePos || null,
+      no_telepon_pribadi || null,
+      no_telepon_rumah || null,
+      tandaTangan || null,
+      tanggal_persetujuan_val,
+      jenisPenjaminVal,
+      no_penjamin || null
     ];
 
     console.log('📌 Values to insert:', values);
+    console.log('📌 Values length:', values.length);
 
-    // Step 5: query SQL
     const sql = `
       INSERT INTO daftarpatients (
         no_rm, nama_lengkap, nik, nomor_identitas_lain, jenis_identitas_lain,
@@ -539,9 +573,9 @@ export default async function handler(req, res) {
         statusPernikahan, pendidikan, pekerjaan, golonganDarah, suku,
         bahasa, kewarganegaraan, alamat, kelurahan_desa, kecamatan,
         kota_kabupaten, provinsi, rt, rw, kodePos,
-        no_telepon_pribadi, no_telepon_rumah, jenis_penjamin, no_penjamin,
-        tandaTangan, tanggal_persetujuan
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+        no_telepon_pribadi, no_telepon_rumah, tandaTangan, tanggal_persetujuan,
+        jenis_penjamin, no_penjamin
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 
     const result = await pool.query(sql, values);
 
@@ -550,6 +584,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ message: 'Pendaftaran pasien berhasil', result });
   } catch (error) {
     console.error('🔥 SQL Error (addDaftarPatient):', error);
-    return res.status(500).json({ message: 'Terjadi kesalahan pada server', error: error?.message ?? String(error) });
+    console.error('🔥 Error stack:', error.stack);
+    return res.status(500).json({ 
+      message: 'Terjadi kesalahan pada server', 
+      error: error?.message ?? String(error),
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
