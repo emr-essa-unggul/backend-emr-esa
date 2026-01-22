@@ -72,12 +72,15 @@ export default async function handler(req, res) {
 
   if (req.method !== 'GET') return res.setHeader('Allow', ['GET']) && res.status(405).end(`Method ${req.method} tidak diizinkan`);
 
-  const { noRM } = req.query;
-  if (!noRM) return res.status(400).json({ message: 'noRM wajib diberikan sebagai query parameter' });
+  // const { noRM } = req.query;
+    const { no_rm } = req.query;
+  // if (!noRM) return res.status(400).json({ message: 'noRM wajib diberikan sebagai query parameter' });
+    if (!no_rm) return res.status(400).json({ message: 'no_rm wajib diberikan sebagai query parameter' });
 
   try {
     const pool = getPool();
-    const [rows] = await pool.query('SELECT * FROM daftarpatients WHERE noRM = ?', [noRM]);
+    // const [rows] = await pool.query('SELECT * FROM daftarpatients WHERE noRM = ?', [noRM]);
+        const [rows] = await pool.query('SELECT * FROM daftarpatients WHERE no_rm = ?', [no_rm]);
 
     if (rows && rows.length > 0) return res.status(200).json(rows[0]);
     return res.status(404).json({ message: 'Pasien tidak ditemukan' });
