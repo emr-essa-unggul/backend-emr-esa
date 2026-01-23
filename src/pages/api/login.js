@@ -1074,16 +1074,16 @@ export default async function handler(req, res) {
     });
 
     setCookie({ res }, 'userName', String(user.username || ''), {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'none',
-  path: '/',
-  maxAge: 30 * 60,
-});
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      path: '/',
+      maxAge: 30 * 60,
+    });
 
 
     // Kembalikan role juga agar frontend bisa langsung set UI (opsional)
-    return res.status(200).json({ message: 'Login berhasil', role: user.role || 'user' });
+    return res.status(200).json({ message: 'Login berhasil', role: user.role || 'user', username: user.username || '' });
     
 
   } catch (error) {
