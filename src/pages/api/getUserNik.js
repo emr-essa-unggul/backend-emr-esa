@@ -1,32 +1,31 @@
 // backend/api/getUserNik.js
 import db from '@/lib/db';
-import { getPool } from '@/lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { userId } = req.query;
+  const { nik } = req.query;
 
-  if (!userId) {
-    return res.status(400).json({ message: 'userId is required' });
+  if (!nik) {
+    return res.status(400).json({ message: 'NIK is required' });
   }
 
   try {
-    // Query untuk mendapatkan NIK berdasarkan userId
-    // Sesuaikan dengan struktur tabel daftarpatients Anda
+    // Query untuk mendapatkan data berdasarkan NIK dari tabel users
     const [rows] = await db.query(
-      'SELECT nik FROM daftarpatients WHERE id = ?',
-      [userId]
+      'SELECT role, username FROM users WHERE nik = ?',
+      [nik]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'NIK not found' });
     }
 
     return res.status(200).json({
-      nik: rows[0].nik || null
+      nik: rows[0].nik || null,
+      nama_lengkap: rows[0].nama_lengkap || null
     });
   } catch (error) {
     console.error('Error fetching NIK:', error);
