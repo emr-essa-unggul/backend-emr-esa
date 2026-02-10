@@ -462,8 +462,8 @@ export default async function handler(req, res) {
 
     const hashedPassword = await bcrypt.hash(String(password).trim(), 10);
 
-    const insertSql = 'INSERT INTO users (username, password, role, otp_secret) VALUES (?, ?, ?, ?)';
-    const params = [username, hashedPassword, role, otp_secret];
+    const insertSql = 'INSERT INTO users (username, email, password, role, otp_secret) VALUES (?, ?, ?, ?, ?)';
+    const params = [username, email, hashedPassword, role, otp_secret];
 
     let result;
     try {
