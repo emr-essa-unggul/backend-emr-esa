@@ -386,7 +386,7 @@ function applyCors(req, res) {
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || 'YOUR_RECAPTCHA_SECRET';
 
-const nodemailer = require('nodemailer');
+// const nodemailer = require('nodemailer');
 
 // Konfigurasi transporter (gunakan Gmail atau SMTP lain)
 const transporter = nodemailer.createTransport({
