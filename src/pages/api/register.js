@@ -428,7 +428,7 @@ export default async function handler(req, res) {
     // applyCors(req, res);
 
     // if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowedd' });
 
     console.log('REGISTER body keys:', Object.keys(req.body));
 
