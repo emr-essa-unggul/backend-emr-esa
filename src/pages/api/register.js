@@ -342,6 +342,7 @@
 // backend-emr-esa/src/pages/api/register.js
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 
 // allowed origins (sesuaikan env jika perlu)
 const ALLOWED_ORIGINS = [
