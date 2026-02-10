@@ -351,27 +351,44 @@ const ALLOWED_ORIGINS = [
   'https://emr-ueu.firebaseapp.com',
 ];
 
+// function applyCors(req, res) {
+//   const origin = req.headers.origin;
+//   res.setHeader('Vary', 'Origin');
+//   if (!origin) {
+//     res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
+//     return;
+//   }
+//   if (ALLOWED_ORIGINS.includes(origin)) {
+//     res.setHeader('Access-Control-Allow-Origin', origin);
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   }
+//   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+// }
+
 function applyCors(req, res) {
   const origin = req.headers.origin;
+
   res.setHeader('Vary', 'Origin');
-  if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
-    return;
-  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
   if (ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    // fallback aman (WAJIB ADA untuk preflight)
+    res.setHeader('Access-Control-Allow-Origin', 'https://emr-ueu.web.app');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
+
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || 'YOUR_RECAPTCHA_SECRET';
 
 const nodemailer = require('nodemailer');
 
 // Konfigurasi transporter (gunakan Gmail atau SMTP lain)
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail', // atau 'smtp.gmail.com' untuk custom
   auth: {
     user: process.env.EMAIL_USER, // Email pengirim (misal: 'yourgmail@gmail.com')
@@ -403,10 +420,13 @@ async function verifyRecaptcha(token, remoteip = null) {
 }
 
 export default async function handler(req, res) {
-  try {
-    applyCors(req, res);
+  applyCors(req, res);
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  try {
+    // applyCors(req, res);
+
+    // if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
     console.log('REGISTER body keys:', Object.keys(req.body));
