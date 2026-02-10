@@ -473,24 +473,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: 'DB insert error', detail: sqlErr && sqlErr.message });
     }
 
-    try {
-      await pool.query(
-        'INSERT INTO audit_logs (user_id, action, table_name, record_id) VALUES (?, ?, ?, ?)',
-        [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]
-      );
-    } catch (auditErr) {
-      console.warn('Audit log failed:', auditErr && auditErr.message);
-    }
-
-    // Setelah try-catch insert SQL
-try {
-  [result] = await pool.query(insertSql, params);
-} catch (sqlErr) {
-  console.error('SQL INSERT error:', sqlErr && sqlErr.code, sqlErr && sqlErr.sqlMessage);
-  return res.status(500).json({ message: 'DB insert error', detail: sqlErr && sqlErr.message });
-}
-
-// Kirim email ke pengguna dan admin
+    // Kirim email ke pengguna dan admin
 try {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -509,6 +492,15 @@ try {
   console.error('Email send error:', emailErr);
   // Jangan gagal registrasi jika email gagal
 }
+
+    try {
+      await pool.query(
+        'INSERT INTO audit_logs (user_id, action, table_name, record_id) VALUES (?, ?, ?, ?)',
+        [result.insertId || 0, 'REGISTER', 'users', result.insertId || null]
+      );
+    } catch (auditErr) {
+      console.warn('Audit log failed:', auditErr && auditErr.message);
+    }
 
     return res.status(200).json({
       message: 'Registrasi berhasil',
