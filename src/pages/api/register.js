@@ -368,6 +368,17 @@ function applyCors(req, res) {
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || 'YOUR_RECAPTCHA_SECRET';
 
+const nodemailer = require('nodemailer');
+
+// Konfigurasi transporter (gunakan Gmail atau SMTP lain)
+const transporter = nodemailer.createTransporter({
+  service: 'gmail', // atau 'smtp.gmail.com' untuk custom
+  auth: {
+    user: process.env.EMAIL_USER, // Email pengirim (misal: 'yourgmail@gmail.com')
+    pass: process.env.EMAIL_PASS, // Password atau App Password Gmail
+  },
+});
+
 // verify reCAPTCHA v3 token
 async function verifyRecaptcha(token, remoteip = null) {
   if (!token) return { success: false, message: 'No token provided' };
@@ -400,9 +411,9 @@ export default async function handler(req, res) {
 
     console.log('REGISTER body keys:', Object.keys(req.body));
 
-    const { username, password, role, otp_secret, recaptchaToken, recaptchaAction } = req.body || {};
-    if (!username || !password || !role || !otp_secret) {
-      console.warn('Missing fields:', { username, role, hasPassword: !!password, hasOtp: !!otp_secret });
+    const { username, password, email, role, otp_secret, recaptchaToken, recaptchaAction } = req.body || {};
+    if (!username || !password || !email || !role || !otp_secret) {
+      console.warn('Missing fields:', { username, email, role, hasPassword: !!password, hasOtp: !!otp_secret });
       return res.status(400).json({ message: 'Harap isi semua field' });
     }
 
